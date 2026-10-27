@@ -128,12 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             const slug = item.name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-            let imgPath = (item.image_url || '').trim();
-            if (!imgPath) {
-                imgPath = `/static/img/${slug}.jpg`;
-            } else if (!imgPath.startsWith('http://') && !imgPath.startsWith('https://') && !imgPath.startsWith('/')) {
-                let clean = imgPath.replace(/^static\//, '').replace(/^\//, '');
-                imgPath = `/static/${clean}`;
+            let imgPath = `/static/img/${slug}.jpg`;
+            if (item.image_url && (item.image_url.startsWith('http://') || item.image_url.startsWith('https://') || item.image_url.startsWith('/static/img/'))) {
+                imgPath = item.image_url;
             }
             
             const vegDot = item.is_veg 
