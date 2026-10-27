@@ -1,0 +1,672 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Management - Maharaja's Kitchen{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto bg-gray-50 p-6 sm:p-8 custom-scrollbar relative">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-text tracking-tight flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary-soft text-primary rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </div>
+                    Staff Management
+                </h1>
+                <p class="text-muted mt-1 text-sm">Manage restaurant employees, assign shifts, roles, and branch allocations.</p>
+            </div>
+            <button onclick="openAddModal()" class="bg-primary hover:bg-[#c94d0a] text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                Add Staff Member
+            </button>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-primary-soft text-primary rounded-xl flex items-center justify-center font-bold text-xl">
+                    👥
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Total Staff</div>
+                    <div class="text-2xl font-extrabold text-text" id="stat-total-staff">0</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-50 text-success rounded-xl flex items-center justify-center font-bold text-xl">
+                    🟢
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Active On Duty</div>
+                    <div class="text-2xl font-extrabold text-success" id="stat-active-staff">0</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold text-xl">
+                    💳
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Billing & Cashiers</div>
+                    <div class="text-2xl font-extrabold text-amber-600" id="stat-cashier-staff">0</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-xl">
+                    👨‍🍳
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Kitchen & Floor</div>
+                    <div class="text-2xl font-extrabold text-blue-600" id="stat-floor-staff">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="relative flex-1">
+                <svg class="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" id="staff-search" placeholder="Search by staff name, phone, or email..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-sm text-text focus:outline-none focus:border-primary focus:bg-white transition-colors">
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="role-filter" class="bg-gray-50 border border-gray-200 text-text text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-primary">
+                    <option value="">All Roles</option>
+                    <option value="Branch Manager">Branch Manager</option>
+                    <option value="Head Cashier">Head Cashier</option>
+                    <option value="Billing Cashier">Billing Cashier</option>
+                    <option value="Executive Chef">Executive Chef</option>
+                    <option value="Floor Supervisor">Floor Supervisor</option>
+                    <option value="Senior Waiter">Senior Waiter</option>
+                    <option value="Delivery Coordinator">Delivery Coordinator</option>
+                </select>
+                <select id="branch-filter" class="bg-gray-50 border border-gray-200 text-text text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-primary">
+                    <option value="">All Branches</option>
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Staff Table Card -->
+        <div class="bg-white shadow-sm rounded-2xl overflow-hidden border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Employee</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Role</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Branch</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Shift</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Contact</th>
+                            <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-muted uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-muted uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-tbody" class="bg-white divide-y divide-gray-200">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="staff-loading" class="py-16 flex justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="staff-empty" class="py-16 text-center text-muted hidden">
+                <p class="font-medium text-base">No staff members found.</p>
+                <p class="text-xs text-gray-400 mt-1">Try adjusting your search or add a new team member.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Add / Edit Staff Modal -->
+<div id="staff-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 relative z-10 border border-gray-200 overflow-hidden transform transition-all">
+        <!-- Modal Header -->
+        <div class="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold text-text flex items-center gap-2" id="modal-title">
+                Add New Staff Member
+            </h3>
+            <button onclick="closeModal()" class="text-muted hover:text-text p-1 rounded-lg hover:bg-gray-200 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Modal Form -->
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="staff-id">
+            
+            <div>
+                <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Full Name *</label>
+                <input type="text" id="staff-name" placeholder="e.g. Rahul Verma" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Role *</label>
+                    <select id="staff-role" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                        <option value="Branch Manager">Branch Manager</option>
+                        <option value="Head Cashier">Head Cashier</option>
+                        <option value="Billing Cashier">Billing Cashier</option>
+                        <option value="Executive Chef">Executive Chef</option>
+                        <option value="Floor Supervisor">Floor Supervisor</option>
+                        <option value="Senior Waiter">Senior Waiter</option>
+                        <option value="Delivery Coordinator">Delivery Coordinator</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Branch *</label>
+                    <select id="staff-branch" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-muted uppercase tracking-wider">Phone Number *</label>
+                        <span id="staff-phone-count" class="text-[11px] font-medium text-muted">0/10</span>
+                    </div>
+                    <div class="relative">
+                        <input type="tel" id="staff-phone" maxlength="10" placeholder="10-digit number" class="w-full bg-white border border-gray-300 rounded-xl pl-3.5 pr-8 py-2.5 text-sm text-text focus:outline-none focus:border-primary transition-all">
+                        <span id="staff-phone-valid" class="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold hidden">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </span>
+                    </div>
+                    <p id="staff-phone-err" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Email Address</label>
+                    <div class="relative">
+                        <input type="email" id="staff-email" placeholder="name@maharajaskitchen.com" class="w-full bg-white border border-gray-300 rounded-xl pl-3.5 pr-8 py-2.5 text-sm text-text focus:outline-none focus:border-primary transition-all">
+                        <span id="staff-email-valid" class="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold hidden">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </span>
+                    </div>
+                    <p id="staff-email-err" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Shift</label>
+                    <select id="staff-shift" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                        <option value="Morning (8 AM - 4 PM)">Morning</option>
+                        <option value="Evening (4 PM - 12 AM)">Evening</option>
+                        <option value="Full Day">Full Day</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Salary (₹/mo)</label>
+                    <input type="number" id="staff-salary" placeholder="25000" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Status</label>
+                    <select id="staff-status" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                        <option value="Active">Active</option>
+                        <option value="On Leave">On Leave</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="pt-4 border-t border-gray-200 flex justify-end gap-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-xl text-muted font-bold hover:text-text bg-gray-100 hover:bg-gray-200 text-sm transition-colors">
+                    Cancel
+                </button>
+                <button onclick="saveStaff()" id="save-staff-btn" class="px-5 py-2 rounded-xl bg-primary hover:bg-[#c94d0a] text-white font-bold text-sm shadow-md transition-all active:scale-95">
+                    Save Staff
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let staffMembers = [];
+    let branches = [];
+    let isEditing = false;
+
+    const tbody = document.getElementById('staff-tbody');
+    const loading = document.getElementById('staff-loading');
+    const emptyState = document.getElementById('staff-empty');
+    const modal = document.getElementById('staff-modal');
+    const modalTitle = document.getElementById('modal-title');
+
+    const inputId = document.getElementById('staff-id');
+    const inputName = document.getElementById('staff-name');
+    const inputRole = document.getElementById('staff-role');
+    const inputBranch = document.getElementById('staff-branch');
+    const inputPhone = document.getElementById('staff-phone');
+    const inputEmail = document.getElementById('staff-email');
+    const inputShift = document.getElementById('staff-shift');
+    const inputSalary = document.getElementById('staff-salary');
+    const inputStatus = document.getElementById('staff-status');
+
+    const phoneCount = document.getElementById('staff-phone-count');
+    const phoneErr = document.getElementById('staff-phone-err');
+    const emailErr = document.getElementById('staff-email-err');
+    const phoneValid = document.getElementById('staff-phone-valid');
+    const emailValid = document.getElementById('staff-email-valid');
+
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    function resetStaffValidations() {
+        if (inputPhone) {
+            inputPhone.classList.remove('border-red-500', 'border-emerald-500');
+            inputPhone.classList.add('border-gray-300');
+        }
+        if (inputEmail) {
+            inputEmail.classList.remove('border-red-500', 'border-emerald-500');
+            inputEmail.classList.add('border-gray-300');
+        }
+        if (phoneErr) phoneErr.classList.add('hidden');
+        if (emailErr) emailErr.classList.add('hidden');
+        if (phoneValid) phoneValid.classList.add('hidden');
+        if (emailValid) emailValid.classList.add('hidden');
+        if (phoneCount) {
+            phoneCount.innerText = '0/10';
+            phoneCount.className = 'text-[11px] font-medium text-muted';
+        }
+    }
+
+    function validateStaffPhone(isSubmit = false) {
+        // Allow ONLY digits and max 10
+        inputPhone.value = inputPhone.value.replace(/\D/g, '').slice(0, 10);
+        const val = inputPhone.value;
+        const len = val.length;
+
+        if (phoneCount) {
+            phoneCount.innerText = `${len}/10`;
+            if (len === 10) {
+                phoneCount.className = 'text-[11px] font-bold text-emerald-600';
+            } else if (len > 0) {
+                phoneCount.className = 'text-[11px] font-medium text-amber-600';
+            } else {
+                phoneCount.className = 'text-[11px] font-medium text-muted';
+            }
+        }
+
+        if (len === 0) {
+            if (isSubmit) {
+                inputPhone.classList.remove('border-gray-300', 'border-emerald-500');
+                inputPhone.classList.add('border-red-500');
+                phoneErr.innerText = 'Phone number is required (exactly 10 digits)';
+                phoneErr.classList.remove('hidden');
+                phoneValid.classList.add('hidden');
+                return false;
+            } else {
+                inputPhone.classList.remove('border-red-500', 'border-emerald-500');
+                inputPhone.classList.add('border-gray-300');
+                phoneErr.classList.add('hidden');
+                phoneValid.classList.add('hidden');
+                return false;
+            }
+        }
+
+        if (len < 10) {
+            inputPhone.classList.remove('border-gray-300', 'border-emerald-500');
+            inputPhone.classList.add('border-red-500');
+            phoneErr.innerText = `Must be exactly 10 digits (${len}/10 entered)`;
+            phoneErr.classList.remove('hidden');
+            phoneValid.classList.add('hidden');
+            return false;
+        }
+
+        // Exactly 10 digits
+        inputPhone.classList.remove('border-red-500', 'border-gray-300');
+        inputPhone.classList.add('border-emerald-500');
+        phoneErr.classList.add('hidden');
+        phoneValid.classList.remove('hidden');
+        return true;
+    }
+
+    function validateStaffEmail(isSubmit = false) {
+        const val = inputEmail.value.trim();
+
+        if (!val) {
+            inputEmail.classList.remove('border-red-500', 'border-emerald-500');
+            inputEmail.classList.add('border-gray-300');
+            emailErr.classList.add('hidden');
+            emailValid.classList.add('hidden');
+            return true;
+        }
+
+        if (!EMAIL_REGEX.test(val)) {
+            inputEmail.classList.remove('border-gray-300', 'border-emerald-500');
+            inputEmail.classList.add('border-red-500');
+            emailErr.innerText = 'Please enter a valid email format (e.g. name@domain.com)';
+            emailErr.classList.remove('hidden');
+            emailValid.classList.add('hidden');
+            return false;
+        }
+
+        // Valid email
+        inputEmail.classList.remove('border-red-500', 'border-gray-300');
+        inputEmail.classList.add('border-emerald-500');
+        emailErr.classList.add('hidden');
+        emailValid.classList.remove('hidden');
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadBranches();
+        loadStaff();
+
+        document.getElementById('staff-search').addEventListener('input', renderStaff);
+        document.getElementById('role-filter').addEventListener('change', renderStaff);
+        document.getElementById('branch-filter').addEventListener('change', renderStaff);
+
+        // Real-time typing validation for phone and email
+        inputPhone.addEventListener('input', () => validateStaffPhone(false));
+        inputPhone.addEventListener('blur', () => {
+            if (inputPhone.value.length > 0 && inputPhone.value.length < 10) {
+                validateStaffPhone(true);
+            }
+        });
+
+        inputEmail.addEventListener('input', () => validateStaffEmail(false));
+        inputEmail.addEventListener('blur', () => {
+            if (inputEmail.value.trim()) {
+                validateStaffEmail(false);
+            }
+        });
+    });
+
+    function loadBranches() {
+        fetch('/api/branches')
+            .then(r => r.json())
+            .then(data => {
+                branches = data;
+                
+                // Populate modal branch select
+                inputBranch.innerHTML = '<option value="">None / Floating</option>' + 
+                    branches.map(b => `<option value="${b.id}">${b.name} (${b.city})</option>`).join('');
+                
+                // Populate filter select
+                const filterSelect = document.getElementById('branch-filter');
+                filterSelect.innerHTML = '<option value="">All Branches</option>' + 
+                    branches.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+            })
+            .catch(console.error);
+    }
+
+    function loadStaff() {
+        loading.classList.remove('hidden');
+        tbody.innerHTML = '';
+        emptyState.classList.add('hidden');
+
+        fetch('/api/staff')
+            .then(r => r.json())
+            .then(data => {
+                staffMembers = data;
+                loading.classList.add('hidden');
+                updateStats();
+                renderStaff();
+            })
+            .catch(err => {
+                loading.classList.add('hidden');
+                console.error(err);
+                showToast('Failed to load staff list', 'error');
+            });
+    }
+
+    function updateStats() {
+        document.getElementById('stat-total-staff').innerText = staffMembers.length;
+        document.getElementById('stat-active-staff').innerText = staffMembers.filter(s => s.status === 'Active').length;
+        document.getElementById('stat-cashier-staff').innerText = staffMembers.filter(s => s.role.toLowerCase().includes('cashier') || s.role.toLowerCase().includes('manager')).length;
+        document.getElementById('stat-floor-staff').innerText = staffMembers.filter(s => s.role.toLowerCase().includes('chef') || s.role.toLowerCase().includes('waiter') || s.role.toLowerCase().includes('supervisor')).length;
+    }
+
+    function renderStaff() {
+        const query = (document.getElementById('staff-search').value || '').toLowerCase();
+        const roleFilter = document.getElementById('role-filter').value;
+        const branchFilter = document.getElementById('branch-filter').value;
+
+        let filtered = staffMembers.filter(s => {
+            const matchesQuery = s.name.toLowerCase().includes(query) || 
+                                 (s.phone && s.phone.includes(query)) || 
+                                 (s.email && s.email.toLowerCase().includes(query));
+            const matchesRole = !roleFilter || s.role === roleFilter;
+            const matchesBranch = !branchFilter || String(s.branch_id) === String(branchFilter);
+            return matchesQuery && matchesRole && matchesBranch;
+        });
+
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            emptyState.classList.remove('hidden');
+            return;
+        } else {
+            emptyState.classList.add('hidden');
+        }
+
+        filtered.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50 transition-colors';
+
+            // Role Badge styling
+            let roleBadge = 'bg-gray-100 text-text';
+            if (s.role.includes('Manager')) roleBadge = 'bg-purple-50 text-purple-700 border-purple-200';
+            else if (s.role.includes('Cashier')) roleBadge = 'bg-amber-50 text-amber-700 border-amber-200';
+            else if (s.role.includes('Chef')) roleBadge = 'bg-red-50 text-red-700 border-red-200';
+            else if (s.role.includes('Waiter')) roleBadge = 'bg-blue-50 text-blue-700 border-blue-200';
+            else if (s.role.includes('Delivery')) roleBadge = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+            // Status styling
+            let statusDot = 'bg-green-500';
+            let statusText = 'text-green-700 bg-green-50';
+            if (s.status === 'On Leave') {
+                statusDot = 'bg-amber-500';
+                statusText = 'text-amber-700 bg-amber-50';
+            } else if (s.status === 'Inactive') {
+                statusDot = 'bg-gray-400';
+                statusText = 'text-gray-600 bg-gray-100';
+            }
+
+            const initials = s.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+            tr.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-primary-soft text-primary font-bold flex items-center justify-center text-xs shrink-0">
+                            ${initials}
+                        </div>
+                        <div>
+                            <div class="font-bold text-text text-sm">${s.name}</div>
+                            <div class="text-xs text-muted">${s.email || 'No email registered'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="px-2.5 py-1 text-xs font-bold rounded-lg border ${roleBadge}">
+                        ${s.role}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-text font-medium">
+                    ${s.branch_name || '<span class="text-muted italic">All Branches</span>'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-xs text-muted">
+                    ${s.shift || 'Morning'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-xs text-text font-mono">
+                    ${s.phone || '-'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusText}">
+                        <span class="w-1.5 h-1.5 rounded-full ${statusDot}"></span>
+                        ${s.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <div class="flex items-center justify-end gap-2">
+                        <button onclick="openEditModal(${s.id})" class="text-primary hover:text-[#c94d0a] font-bold p-1.5 rounded-lg hover:bg-primary-soft transition-colors" title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        </button>
+                        <button onclick="deleteStaff(${s.id})" class="text-danger hover:text-red-700 font-bold p-1.5 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function openAddModal() {
+        isEditing = false;
+        modalTitle.innerText = "Add New Staff Member";
+        inputId.value = '';
+        inputName.value = '';
+        inputRole.value = 'Floor Waiter';
+        inputBranch.value = branches.length > 0 ? branches[0].id : '';
+        inputPhone.value = '';
+        inputEmail.value = '';
+        inputShift.value = 'Morning (8 AM - 4 PM)';
+        inputSalary.value = '25000';
+        inputStatus.value = 'Active';
+
+        resetStaffValidations();
+        modal.classList.remove('hidden');
+    }
+
+    function openEditModal(id) {
+        const s = staffMembers.find(item => item.id === id);
+        if (!s) return;
+
+        isEditing = true;
+        modalTitle.innerText = "Edit Staff Member";
+        inputId.value = s.id;
+        inputName.value = s.name;
+        inputRole.value = s.role;
+        inputBranch.value = s.branch_id || '';
+        inputPhone.value = s.phone;
+        inputEmail.value = s.email || '';
+        inputShift.value = s.shift || 'Morning (8 AM - 4 PM)';
+        inputSalary.value = s.salary || 25000;
+        inputStatus.value = s.status || 'Active';
+
+        resetStaffValidations();
+        validateStaffPhone(false);
+        if (inputEmail.value.trim()) {
+            validateStaffEmail(false);
+        }
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        resetStaffValidations();
+        modal.classList.add('hidden');
+    }
+
+    function saveStaff() {
+        const name = inputName.value.trim();
+        const role = inputRole.value;
+        const branch_id = inputBranch.value ? parseInt(inputBranch.value) : null;
+        const phone = inputPhone.value.trim();
+        const email = inputEmail.value.trim();
+        const shift = inputShift.value;
+        const salary = parseFloat(inputSalary.value) || 0.0;
+        const status = inputStatus.value;
+
+        const isPhoneValid = validateStaffPhone(true);
+        const isEmailValid = validateStaffEmail(true);
+
+        if (!name) {
+            showToast('Staff member name is required!', 'error');
+            inputName.focus();
+            return;
+        }
+        if (!isPhoneValid) {
+            showToast('Please enter a valid 10-digit phone number', 'error');
+            inputPhone.focus();
+            return;
+        }
+        if (!isEmailValid) {
+            showToast('Please enter a valid email address format', 'error');
+            inputEmail.focus();
+            return;
+        }
+
+        const payload = { name, role, branch_id, phone, email, shift, salary, status };
+        const btn = document.getElementById('save-staff-btn');
+        btn.disabled = true;
+
+        if (isEditing) {
+            const id = inputId.value;
+            fetch(`/api/staff/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Failed to update staff member');
+                return data;
+            })
+            .then(data => {
+                btn.disabled = false;
+                closeModal();
+                showToast('Staff member updated successfully!');
+                loadStaff();
+            })
+            .catch(err => {
+                btn.disabled = false;
+                console.error(err);
+                showToast(err.message || 'Failed to update staff member', 'error');
+            });
+        } else {
+            fetch('/api/staff', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Failed to add staff member');
+                return data;
+            })
+            .then(data => {
+                btn.disabled = false;
+                closeModal();
+                showToast('Staff member added successfully!');
+                loadStaff();
+            })
+            .catch(err => {
+                btn.disabled = false;
+                console.error(err);
+                showToast(err.message || 'Failed to add staff member', 'error');
+            });
+        }
+    }
+
+    function deleteStaff(id) {
+        if (!confirm('Are you sure you want to remove this staff member?')) return;
+
+        fetch(`/api/staff/${id}`, {
+            method: 'DELETE'
+        })
+        .then(r => r.json())
+        .then(data => {
+            showToast('Staff member removed.');
+            loadStaff();
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Error removing staff member', 'error');
+        });
+    }
+</script>
+{% endblock %}

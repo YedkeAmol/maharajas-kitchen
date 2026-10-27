@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Maharaja's Kitchen{% endblock %}
+
+{% block head %}
+<script src="/static/js/chart.umd.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-text flex items-center gap-3">
+                <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                Dashboard
+            </h1>
+            <p class="text-muted mt-2">Overview of sales and order performance.</p>
+        </div>
+        <div class="w-full sm:w-64">
+            <select id="date-range" class="bg-white border border-gray-300 text-text text-sm rounded-xl focus:ring-primary focus:border-primary block w-full p-2.5 font-bold shadow-sm outline-none">
+                <option value="monthly" selected>Monthly Trend (By Month)</option>
+                <option value="30">Last 30 Days (Daily)</option>
+                <option value="7">Last 7 Days (Daily)</option>
+                <option value="today">Today (Hourly)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-center">
+            <p class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Total Sales</p>
+            <div class="text-3xl font-extrabold text-text">₹<span id="stat-sales">0.00</span></div>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-center">
+            <p class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Total Orders</p>
+            <div class="text-3xl font-extrabold text-text" id="stat-orders">0</div>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-center">
+            <p class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Avg Order Value</p>
+            <div class="text-3xl font-extrabold text-text">₹<span id="stat-aov">0.00</span></div>
+        </div>
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-center">
+            <p class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Top Dish</p>
+            <div class="text-xl font-bold text-primary truncate" id="stat-topdish">-</div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <!-- Sales Trend Line Chart -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm lg:col-span-2 flex flex-col justify-between">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-text">Sales Trend</h3>
+                <span class="text-xs font-bold text-primary bg-primary-soft px-2.5 py-1 rounded-full" id="trend-view-label">Monthly</span>
+            </div>
+            <div class="h-64 w-full">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Payment Modes Doughnut Chart with Percentages -->
+        <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-text">Payment Modes</h3>
+                    <span class="text-xs font-semibold text-muted bg-gray-100 px-2 py-0.5 rounded-full" id="payment-total-orders">0 Orders</span>
+                </div>
+                <div class="h-56 w-full flex justify-center relative">
+                    <canvas id="paymentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Percentage Breakdown Badges -->
+            <div id="payment-percentage-badges" class="grid grid-cols-3 gap-2 text-center pt-3 mt-2 border-t border-gray-100">
+                <!-- Dynamically injected badges -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-8">
+        <h3 class="text-lg font-bold text-text mb-4">Top 5 Selling Dishes</h3>
+        <div class="h-72 w-full">
+            <canvas id="topDishesChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const rangeSelect = document.getElementById('date-range');
+    
+    let salesChartInstance = null;
+    let paymentChartInstance = null;
+    let topDishesChartInstance = null;
+
+    const brandPrimary = '#E8590C';
+    const brandSoft = '#FFF1E6';
+
+    Chart.defaults.font.family = 'Inter, sans-serif';
+    Chart.defaults.color = '#6B7280';
+
+    // Chart.js Plugin to render the leading percentage inside the center of the ring
+    const centerTextPlugin = {
+        id: 'centerTextPlugin',
+        beforeDraw: function(chart) {
+            if (chart.config.type !== 'doughnut') return;
+            const { width, height, ctx } = chart;
+            const dataset = chart.data.datasets[0];
+            if (!dataset || !dataset.data || dataset.data.length === 0) return;
+            
+            const total = dataset.data.reduce((a, b) => a + b, 0);
+            if (total === 0) return;
+
+            let maxIndex = 0;
+            let maxVal = dataset.data[0];
+            for (let i = 1; i < dataset.data.length; i++) {
+                if (dataset.data[i] > maxVal) {
+                    maxVal = dataset.data[i];
+                    maxIndex = i;
+                }
+            }
+            
+            const topLabel = chart.data.labels[maxIndex] || '';
+            const pct = Math.round((maxVal / total) * 100);
+
+            ctx.save();
+            ctx.font = 'bold 26px Inter, sans-serif';
+            ctx.fillStyle = '#1F2937';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            // Vertical center adjustment
+            const centerY = (chart.chartArea ? (chart.chartArea.top + chart.chartArea.bottom) / 2 : height / 2);
+            ctx.fillText(pct + '%', width / 2, centerY - 8);
+
+            ctx.font = '600 12px Inter, sans-serif';
+            ctx.fillStyle = '#6B7280';
+            ctx.fillText(topLabel, width / 2, centerY + 16);
+            ctx.restore();
+        }
+    };
+
+    function loadDashboard() {
+        const range = rangeSelect.value;
+
+        const trendLabelMap = {
+            'monthly': 'Monthly View',
+            '30': 'Last 30 Days',
+            '7': 'Last 7 Days',
+            'today': 'Today (Hourly)'
+        };
+        const trendBadge = document.getElementById('trend-view-label');
+        if (trendBadge) trendBadge.innerText = trendLabelMap[range] || 'Monthly';
+        
+        // Load Stats
+        fetch(`/api/dashboard/stats?range=${range}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('stat-sales').innerText = data.sales.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('stat-orders').innerText = data.orders;
+                document.getElementById('stat-aov').innerText = data.aov.toFixed(2);
+                document.getElementById('stat-topdish').innerText = data.top_dish;
+            });
+
+        // Load Charts
+        fetch(`/api/dashboard/charts?range=${range}`)
+            .then(res => res.json())
+            .then(data => {
+                
+                // 1. Sales Trend Chart (Shows Months e.g. May 2026, Jun 2026 or clean dates like 27 Sep)
+                if (salesChartInstance) salesChartInstance.destroy();
+                const ctxSales = document.getElementById('salesChart').getContext('2d');
+                salesChartInstance = new Chart(ctxSales, {
+                    type: 'line',
+                    data: {
+                        labels: data.trend.map(d => d.label),
+                        datasets: [{
+                            label: 'Sales (₹)',
+                            data: data.trend.map(d => d.value),
+                            borderColor: brandPrimary,
+                            backgroundColor: brandPrimary + '26', // 15% opacity
+                            borderWidth: 3,
+                            tension: 0.35,
+                            fill: true,
+                            pointBackgroundColor: brandPrimary,
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` Sales: ₹${context.raw.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true, 
+                                grid: { borderDash: [4, 4], color: '#f3f4f6' },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '₹' + (value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value);
+                                    }
+                                }
+                            },
+                            x: { 
+                                grid: { display: false },
+                                ticks: {
+                                    font: { weight: '600' }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 2. Top Dishes Chart
+                if (topDishesChartInstance) topDishesChartInstance.destroy();
+                const ctxDishes = document.getElementById('topDishesChart').getContext('2d');
+                topDishesChartInstance = new Chart(ctxDishes, {
+                    type: 'bar',
+                    data: {
+                        labels: data.top_dishes.map(d => d.label),
+                        datasets: [{
+                            label: 'Quantity Sold',
+                            data: data.top_dishes.map(d => d.value),
+                            backgroundColor: brandPrimary,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#f3f4f6' } },
+                            y: { grid: { display: false } }
+                        }
+                    }
+                });
+
+                // 3. Payment Modes Ring Chart (with Percentages in center, in legend, and badges)
+                if (paymentChartInstance) paymentChartInstance.destroy();
+                const ctxPayment = document.getElementById('paymentChart').getContext('2d');
+                
+                const totalOrdersCount = data.payments.reduce((sum, p) => sum + p.value, 0);
+                const countBadge = document.getElementById('payment-total-orders');
+                if (countBadge) countBadge.innerText = `${totalOrdersCount} Orders`;
+
+                const paymentColors = ['#3B82F6', '#16A34A', brandPrimary, '#F59E0B'];
+
+                paymentChartInstance = new Chart(ctxPayment, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.payments.map(d => d.label),
+                        datasets: [{
+                            data: data.payments.map(d => d.value),
+                            backgroundColor: paymentColors.slice(0, data.payments.length),
+                            borderWidth: 3,
+                            borderColor: '#ffffff',
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '72%',
+                        plugins: {
+                            legend: { 
+                                position: 'bottom', 
+                                labels: { 
+                                    padding: 14, 
+                                    usePointStyle: true,
+                                    font: { size: 12, weight: '600' },
+                                    generateLabels: function(chart) {
+                                        const dataset = chart.data.datasets[0];
+                                        const total = dataset.data.reduce((a, b) => a + b, 0);
+                                        return chart.data.labels.map((lbl, idx) => {
+                                            const val = dataset.data[idx];
+                                            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                                            return {
+                                                text: `${lbl} (${pct}%)`,
+                                                fillStyle: dataset.backgroundColor[idx],
+                                                strokeStyle: dataset.backgroundColor[idx],
+                                                lineWidth: 0,
+                                                pointStyle: 'circle',
+                                                index: idx
+                                            };
+                                        });
+                                    }
+                                } 
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
+                                        return ` ${context.label}: ${val} orders (${pct}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    plugins: [centerTextPlugin]
+                });
+
+                // 4. Update Payment Percentage Badges beneath the ring
+                const badgesContainer = document.getElementById('payment-percentage-badges');
+                if (badgesContainer) {
+                    badgesContainer.innerHTML = '';
+                    const colorMap = {
+                        'UPI': { bg: 'bg-blue-50', text: 'text-blue-600', dot: 'bg-blue-500' },
+                        'Cash': { bg: 'bg-green-50', text: 'text-green-600', dot: 'bg-green-500' },
+                        'Card': { bg: 'bg-orange-50', text: 'text-primary', dot: 'bg-primary' }
+                    };
+
+                    data.payments.forEach(p => {
+                        const c = colorMap[p.label] || { bg: 'bg-gray-50', text: 'text-text', dot: 'bg-gray-400' };
+                        const div = document.createElement('div');
+                        div.className = `${c.bg} p-2 rounded-xl flex flex-col items-center justify-center border border-gray-100`;
+                        div.innerHTML = `
+                            <span class="text-[11px] font-bold text-muted flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full ${c.dot}"></span>
+                                ${p.label}
+                            </span>
+                            <span class="text-base font-extrabold ${c.text}">${p.percentage}%</span>
+                            <span class="text-[10px] text-muted">${p.value} orders</span>
+                        `;
+                        badgesContainer.appendChild(div);
+                    });
+                }
+            });
+    }
+
+    rangeSelect.addEventListener('change', loadDashboard);
+    loadDashboard(); // initial load
+});
+</script>
+{% endblock %}

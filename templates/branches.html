@@ -1,0 +1,612 @@
+{% extends 'base.html' %}
+
+{% block title %}Branches - Maharaja's Kitchen{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto bg-gray-50 p-6 sm:p-8 custom-scrollbar relative">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-text tracking-tight flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary-soft text-primary rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                    </div>
+                    Branch Locations
+                </h1>
+                <p class="text-muted mt-1 text-sm">Manage restaurant franchise locations, table capacities, and outlet contacts.</p>
+            </div>
+            <button onclick="openAddBranchModal()" class="bg-primary hover:bg-[#c94d0a] text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                Add New Branch
+            </button>
+        </div>
+
+        <!-- Metric Overview Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-primary-soft text-primary rounded-xl flex items-center justify-center font-bold text-xl">
+                    🏢
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Total Outlets</div>
+                    <div class="text-2xl font-extrabold text-text" id="stat-total-branches">0</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-green-50 text-success rounded-xl flex items-center justify-center font-bold text-xl">
+                    🪑
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Dining Tables</div>
+                    <div class="text-2xl font-extrabold text-success" id="stat-total-tables">0</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center font-bold text-xl">
+                    📍
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Cities Covered</div>
+                    <div class="text-2xl font-extrabold text-blue-600" id="stat-total-cities">0</div>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold text-xl">
+                    👨‍💼
+                </div>
+                <div>
+                    <div class="text-xs font-semibold text-muted uppercase">Active Staff</div>
+                    <div class="text-2xl font-extrabold text-amber-600" id="stat-total-branch-staff">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-3">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="branch-search" placeholder="Search branches by name, city, address, or manager..." class="w-full bg-transparent border-none text-sm text-text focus:outline-none placeholder-gray-400">
+        </div>
+
+        <!-- Loading State -->
+        <div id="branches-loading" class="py-16 flex justify-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+
+        <!-- Branches Cards Grid -->
+        <div id="branches-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <!-- Cards populated dynamically via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="branches-empty" class="py-16 text-center text-muted hidden">
+            <p class="font-medium text-base">No branches found matching your search.</p>
+        </div>
+
+    </div>
+</div>
+
+<!-- Add / Edit Branch Modal -->
+<div id="branch-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onclick="closeBranchModal()"></div>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 relative z-10 border border-gray-200 overflow-hidden transform transition-all">
+        <!-- Modal Header -->
+        <div class="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-bold text-text flex items-center gap-2" id="branch-modal-title">
+                Add New Branch
+            </h3>
+            <button onclick="closeBranchModal()" class="text-muted hover:text-text p-1 rounded-lg hover:bg-gray-200 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <!-- Modal Body Form -->
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="branch-id">
+
+            <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Branch Name *</label>
+                    <input type="text" id="b-name" placeholder="e.g. Connaught Place Flagship" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">City *</label>
+                    <input type="text" id="b-city" placeholder="e.g. New Delhi" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Full Address *</label>
+                <textarea id="b-address" rows="2" placeholder="Street, Landmark, Area, Pincode" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2 text-sm text-text focus:outline-none focus:border-primary"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-muted uppercase tracking-wider">Contact Phone *</label>
+                        <span id="b-phone-count" class="text-[11px] font-medium text-muted">0/10</span>
+                    </div>
+                    <div class="relative">
+                        <input type="tel" id="b-phone" maxlength="10" placeholder="10-digit number" class="w-full bg-white border border-gray-300 rounded-xl pl-3.5 pr-8 py-2.5 text-sm text-text focus:outline-none focus:border-primary transition-all">
+                        <span id="b-phone-valid" class="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold hidden">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </span>
+                    </div>
+                    <p id="b-phone-err" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Email Address</label>
+                    <div class="relative">
+                        <input type="email" id="b-email" placeholder="branch@maharajaskitchen.com" class="w-full bg-white border border-gray-300 rounded-xl pl-3.5 pr-8 py-2.5 text-sm text-text focus:outline-none focus:border-primary transition-all">
+                        <span id="b-email-valid" class="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold hidden">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        </span>
+                    </div>
+                    <p id="b-email-err" class="text-xs text-red-500 mt-1 hidden"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Branch Manager</label>
+                    <input type="text" id="b-manager" placeholder="Manager Name" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Dining Tables</label>
+                    <input type="number" id="b-tables" placeholder="20" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Status</label>
+                    <select id="b-status" class="w-full bg-white border border-gray-300 rounded-xl px-3 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+                        <option value="Active">Active</option>
+                        <option value="Renovating">Renovating</option>
+                        <option value="Opening Soon">Opening Soon</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-1">Operating Hours</label>
+                <input type="text" id="b-hours" placeholder="e.g. 11:00 AM - 11:30 PM" class="w-full bg-white border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-text focus:outline-none focus:border-primary">
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="pt-4 border-t border-gray-200 flex justify-end gap-2">
+                <button onclick="closeBranchModal()" class="px-4 py-2 rounded-xl text-muted font-bold hover:text-text bg-gray-100 hover:bg-gray-200 text-sm transition-colors">
+                    Cancel
+                </button>
+                <button onclick="saveBranch()" id="save-branch-btn" class="px-5 py-2 rounded-xl bg-primary hover:bg-[#c94d0a] text-white font-bold text-sm shadow-md transition-all active:scale-95">
+                    Save Branch
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let branches = [];
+    let isEditingBranch = false;
+
+    const grid = document.getElementById('branches-grid');
+    const loading = document.getElementById('branches-loading');
+    const emptyState = document.getElementById('branches-empty');
+    const modal = document.getElementById('branch-modal');
+    const modalTitle = document.getElementById('branch-modal-title');
+
+    const inputId = document.getElementById('branch-id');
+    const inputName = document.getElementById('b-name');
+    const inputCity = document.getElementById('b-city');
+    const inputAddress = document.getElementById('b-address');
+    const inputPhone = document.getElementById('b-phone');
+    const inputEmail = document.getElementById('b-email');
+    const inputManager = document.getElementById('b-manager');
+    const inputTables = document.getElementById('b-tables');
+    const inputHours = document.getElementById('b-hours');
+    const inputStatus = document.getElementById('b-status');
+
+    const bPhoneCount = document.getElementById('b-phone-count');
+    const bPhoneErr = document.getElementById('b-phone-err');
+    const bEmailErr = document.getElementById('b-email-err');
+    const bPhoneValid = document.getElementById('b-phone-valid');
+    const bEmailValid = document.getElementById('b-email-valid');
+
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    function resetBranchValidations() {
+        if (inputPhone) {
+            inputPhone.classList.remove('border-red-500', 'border-emerald-500');
+            inputPhone.classList.add('border-gray-300');
+        }
+        if (inputEmail) {
+            inputEmail.classList.remove('border-red-500', 'border-emerald-500');
+            inputEmail.classList.add('border-gray-300');
+        }
+        if (bPhoneErr) bPhoneErr.classList.add('hidden');
+        if (bEmailErr) bEmailErr.classList.add('hidden');
+        if (bPhoneValid) bPhoneValid.classList.add('hidden');
+        if (bEmailValid) bEmailValid.classList.add('hidden');
+        if (bPhoneCount) {
+            bPhoneCount.innerText = '0/10';
+            bPhoneCount.className = 'text-[11px] font-medium text-muted';
+        }
+    }
+
+    function validateBranchPhone(isSubmit = false) {
+        // Allow ONLY digits and max 10
+        inputPhone.value = inputPhone.value.replace(/\D/g, '').slice(0, 10);
+        const val = inputPhone.value;
+        const len = val.length;
+
+        if (bPhoneCount) {
+            bPhoneCount.innerText = `${len}/10`;
+            if (len === 10) {
+                bPhoneCount.className = 'text-[11px] font-bold text-emerald-600';
+            } else if (len > 0) {
+                bPhoneCount.className = 'text-[11px] font-medium text-amber-600';
+            } else {
+                bPhoneCount.className = 'text-[11px] font-medium text-muted';
+            }
+        }
+
+        if (len === 0) {
+            if (isSubmit) {
+                inputPhone.classList.remove('border-gray-300', 'border-emerald-500');
+                inputPhone.classList.add('border-red-500');
+                bPhoneErr.innerText = 'Contact phone is required (exactly 10 digits)';
+                bPhoneErr.classList.remove('hidden');
+                bPhoneValid.classList.add('hidden');
+                return false;
+            } else {
+                inputPhone.classList.remove('border-red-500', 'border-emerald-500');
+                inputPhone.classList.add('border-gray-300');
+                bPhoneErr.classList.add('hidden');
+                bPhoneValid.classList.add('hidden');
+                return false;
+            }
+        }
+
+        if (len < 10) {
+            inputPhone.classList.remove('border-gray-300', 'border-emerald-500');
+            inputPhone.classList.add('border-red-500');
+            bPhoneErr.innerText = `Must be exactly 10 digits (${len}/10 entered)`;
+            bPhoneErr.classList.remove('hidden');
+            bPhoneValid.classList.add('hidden');
+            return false;
+        }
+
+        // Exactly 10 digits
+        inputPhone.classList.remove('border-red-500', 'border-gray-300');
+        inputPhone.classList.add('border-emerald-500');
+        bPhoneErr.classList.add('hidden');
+        bPhoneValid.classList.remove('hidden');
+        return true;
+    }
+
+    function validateBranchEmail(isSubmit = false) {
+        const val = inputEmail.value.trim();
+
+        if (!val) {
+            inputEmail.classList.remove('border-red-500', 'border-emerald-500');
+            inputEmail.classList.add('border-gray-300');
+            bEmailErr.classList.add('hidden');
+            bEmailValid.classList.add('hidden');
+            return true;
+        }
+
+        if (!EMAIL_REGEX.test(val)) {
+            inputEmail.classList.remove('border-gray-300', 'border-emerald-500');
+            inputEmail.classList.add('border-red-500');
+            bEmailErr.innerText = 'Please enter a valid email format (e.g. name@domain.com)';
+            bEmailErr.classList.remove('hidden');
+            bEmailValid.classList.add('hidden');
+            return false;
+        }
+
+        // Valid email
+        inputEmail.classList.remove('border-red-500', 'border-gray-300');
+        inputEmail.classList.add('border-emerald-500');
+        bEmailErr.classList.add('hidden');
+        bEmailValid.classList.remove('hidden');
+        return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadBranches();
+        document.getElementById('branch-search').addEventListener('input', renderBranches);
+
+        // Real-time typing validation for contact phone and email
+        inputPhone.addEventListener('input', () => validateBranchPhone(false));
+        inputPhone.addEventListener('blur', () => {
+            if (inputPhone.value.length > 0 && inputPhone.value.length < 10) {
+                validateBranchPhone(true);
+            }
+        });
+
+        inputEmail.addEventListener('input', () => validateBranchEmail(false));
+        inputEmail.addEventListener('blur', () => {
+            if (inputEmail.value.trim()) {
+                validateBranchEmail(false);
+            }
+        });
+    });
+
+    function loadBranches() {
+        loading.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        grid.innerHTML = '';
+
+        fetch('/api/branches')
+            .then(r => r.json())
+            .then(data => {
+                branches = data;
+                loading.classList.add('hidden');
+                updateBranchStats();
+                renderBranches();
+            })
+            .catch(err => {
+                loading.classList.add('hidden');
+                console.error(err);
+                showToast('Failed to load branches', 'error');
+            });
+    }
+
+    function updateBranchStats() {
+        document.getElementById('stat-total-branches').innerText = branches.length;
+        
+        const totalTables = branches.reduce((sum, b) => sum + (b.tables_count || 0), 0);
+        document.getElementById('stat-total-tables').innerText = totalTables;
+
+        const uniqueCities = new Set(branches.map(b => b.city)).size;
+        document.getElementById('stat-total-cities').innerText = uniqueCities;
+
+        const totalStaff = branches.reduce((sum, b) => sum + (b.staff_count || 0), 0);
+        document.getElementById('stat-total-branch-staff').innerText = totalStaff;
+    }
+
+    function renderBranches() {
+        const query = (document.getElementById('branch-search').value || '').toLowerCase();
+        
+        const filtered = branches.filter(b => {
+            return b.name.toLowerCase().includes(query) ||
+                   b.city.toLowerCase().includes(query) ||
+                   b.address.toLowerCase().includes(query) ||
+                   (b.manager_name && b.manager_name.toLowerCase().includes(query));
+        });
+
+        grid.innerHTML = '';
+
+        if (filtered.length === 0) {
+            emptyState.classList.remove('hidden');
+            return;
+        } else {
+            emptyState.classList.add('hidden');
+        }
+
+        filtered.forEach(b => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col justify-between';
+
+            let statusColor = 'bg-green-50 text-green-700 border-green-200';
+            let dotColor = 'bg-green-500';
+            if (b.status === 'Renovating') {
+                statusColor = 'bg-amber-50 text-amber-700 border-amber-200';
+                dotColor = 'bg-amber-500';
+            } else if (b.status === 'Opening Soon') {
+                statusColor = 'bg-blue-50 text-blue-700 border-blue-200';
+                dotColor = 'bg-blue-500';
+            }
+
+            card.innerHTML = `
+                <div>
+                    <div class="flex items-start justify-between gap-2 mb-3">
+                        <div>
+                            <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-primary-soft text-primary uppercase tracking-wider mb-1">
+                                ${b.city}
+                            </span>
+                            <h3 class="text-xl font-bold text-text">${b.name}</h3>
+                        </div>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${statusColor} shrink-0">
+                            <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+                            ${b.status}
+                        </span>
+                    </div>
+
+                    <div class="text-xs text-muted space-y-2 mb-4 border-b border-gray-100 pb-4">
+                        <p class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span>${b.address}</span>
+                        </p>
+                        <p class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                            <span>${b.phone}</span>
+                        </p>
+                        <p class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>${b.opening_time || '11:00 AM - 11:00 PM'}</span>
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2 text-center bg-gray-50 p-2.5 rounded-xl border border-gray-100 mb-4">
+                        <div>
+                            <div class="text-[10px] text-muted font-bold uppercase">Tables</div>
+                            <div class="text-sm font-extrabold text-text">${b.tables_count || 0}</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-muted font-bold uppercase">Staff</div>
+                            <div class="text-sm font-extrabold text-primary">${b.staff_count || 0}</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-muted font-bold uppercase">Manager</div>
+                            <div class="text-xs font-bold text-text truncate">${b.manager_name || 'Assigned'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                    <button onclick="openEditBranchModal(${b.id})" class="text-xs font-bold text-primary hover:text-[#c94d0a] bg-primary-soft hover:bg-[#ffe3cf] px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Edit
+                    </button>
+                    <button onclick="deleteBranch(${b.id})" class="text-xs font-bold text-danger hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Delete
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function openAddBranchModal() {
+        isEditingBranch = false;
+        modalTitle.innerText = "Add New Branch";
+        inputId.value = '';
+        inputName.value = '';
+        inputCity.value = '';
+        inputAddress.value = '';
+        inputPhone.value = '';
+        inputEmail.value = '';
+        inputManager.value = '';
+        inputTables.value = '20';
+        inputHours.value = '11:00 AM - 11:00 PM';
+        inputStatus.value = 'Active';
+
+        resetBranchValidations();
+        modal.classList.remove('hidden');
+    }
+
+    function openEditBranchModal(id) {
+        const b = branches.find(item => item.id === id);
+        if (!b) return;
+
+        isEditingBranch = true;
+        modalTitle.innerText = "Edit Branch Location";
+        inputId.value = b.id;
+        inputName.value = b.name;
+        inputCity.value = b.city;
+        inputAddress.value = b.address;
+        inputPhone.value = b.phone;
+        inputEmail.value = b.email || '';
+        inputManager.value = b.manager_name || '';
+        inputTables.value = b.tables_count || 20;
+        inputHours.value = b.opening_time || '11:00 AM - 11:00 PM';
+        inputStatus.value = b.status || 'Active';
+
+        resetBranchValidations();
+        validateBranchPhone(false);
+        if (inputEmail.value.trim()) {
+            validateBranchEmail(false);
+        }
+        modal.classList.remove('hidden');
+    }
+
+    function closeBranchModal() {
+        resetBranchValidations();
+        modal.classList.add('hidden');
+    }
+
+    function saveBranch() {
+        const name = inputName.value.trim();
+        const city = inputCity.value.trim();
+        const address = inputAddress.value.trim();
+        const phone = inputPhone.value.trim();
+        const email = inputEmail.value.trim();
+        const manager_name = inputManager.value.trim();
+        const tables_count = parseInt(inputTables.value) || 20;
+        const opening_time = inputHours.value.trim() || '11:00 AM - 11:00 PM';
+        const status = inputStatus.value;
+
+        const isPhoneValid = validateBranchPhone(true);
+        const isEmailValid = validateBranchEmail(true);
+
+        if (!name || !city || !address) {
+            showToast('Branch name, city, and address are required!', 'error');
+            return;
+        }
+        if (!isPhoneValid) {
+            showToast('Please enter a valid 10-digit contact phone number!', 'error');
+            inputPhone.focus();
+            return;
+        }
+        if (!isEmailValid) {
+            showToast('Please enter a valid email address format!', 'error');
+            inputEmail.focus();
+            return;
+        }
+
+        const payload = { name, city, address, phone, email, manager_name, tables_count, opening_time, status };
+        const btn = document.getElementById('save-branch-btn');
+        btn.disabled = true;
+
+        if (isEditingBranch) {
+            const id = inputId.value;
+            fetch(`/api/branches/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Failed to update branch');
+                return data;
+            })
+            .then(data => {
+                btn.disabled = false;
+                closeBranchModal();
+                showToast('Branch location updated successfully!');
+                loadBranches();
+            })
+            .catch(err => {
+                btn.disabled = false;
+                console.error(err);
+                showToast(err.message || 'Failed to update branch', 'error');
+            });
+        } else {
+            fetch('/api/branches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async r => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Failed to add branch');
+                return data;
+            })
+            .then(data => {
+                btn.disabled = false;
+                closeBranchModal();
+                showToast('New branch added successfully!');
+                loadBranches();
+            })
+            .catch(err => {
+                btn.disabled = false;
+                console.error(err);
+                showToast(err.message || 'Failed to add branch', 'error');
+            });
+        }
+    }
+
+    function deleteBranch(id) {
+        if (!confirm('Are you sure you want to delete this branch?')) return;
+
+        fetch(`/api/branches/${id}`, {
+            method: 'DELETE'
+        })
+        .then(r => r.json())
+        .then(data => {
+            showToast('Branch removed.');
+            loadBranches();
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Error removing branch', 'error');
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt - {{ bill_number }} - Maharaja's Kitchen{% endblock %}
+
+{% block head %}
+<script src="{{ url_for('static', filename='js/html2pdf.bundle.min.js') }}"></script>
+<style>
+    @media print {
+        body, html {
+            background: white !important;
+            height: auto !important;
+            overflow: visible !important;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        }
+        nav, aside, #toast-container, .no-print {
+            display: none !important;
+        }
+        .flex-1, main {
+            overflow: visible !important;
+            height: auto !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            background: white !important;
+        }
+        #print-wrapper {
+            padding: 0 !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+        }
+        #receipt-card {
+            box-shadow: none !important;
+            border: 1px solid #d1d5db !important;
+            width: 100% !important;
+            max-width: 480px !important;
+            margin: 0 auto !important;
+            border-radius: 0 !important;
+        }
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto bg-gray-50 flex flex-col items-center py-8 px-4" id="print-wrapper">
+    
+    <!-- Action Bar (Top) -->
+    <div class="w-full max-w-md flex items-center justify-between mb-6 no-print">
+        <a href="/" class="inline-flex items-center text-muted hover:text-primary transition-colors font-semibold text-sm">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            New Order
+        </a>
+        <a href="/history" class="inline-flex items-center text-muted hover:text-primary transition-colors font-semibold text-sm">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Billing History
+        </a>
+    </div>
+
+    <!-- Receipt Container -->
+    <div class="w-full max-w-md" id="receipt-card-container">
+        <!-- Receipt Card -->
+        <div id="receipt-card" class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+            
+            <!-- Receipt Header -->
+            <div class="bg-gray-50 p-6 border-b border-gray-200 text-center text-text relative">
+                <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-gray-200 overflow-hidden">
+                    <img src="/static/img/logo.jpg" alt="Logo" class="w-full h-full object-cover">
+                </div>
+                <h1 class="text-2xl font-extrabold text-text tracking-tight mb-0.5">Maharaja's Kitchen</h1>
+                <p class="text-xs text-muted font-medium mb-1">Authentic Royal Indian Dining</p>
+                <p class="text-[11px] text-muted">Connaught Place, New Delhi - 110001 | Tel: +91 11 4321 9876</p>
+                <p class="text-[10px] text-muted font-mono mt-0.5">GSTIN: 07AAAAA0000A1Z5</p>
+                
+                <div class="mt-3 inline-block px-3 py-1 bg-primary-soft text-primary font-bold text-xs rounded-full uppercase tracking-wider" id="r-order-badge">
+                    Dine-In Order
+                </div>
+            </div>
+
+            <!-- Receipt Body -->
+            <div class="p-6 text-text">
+                <div id="receipt-details" class="hidden">
+                    <!-- Meta info row -->
+                    <div class="grid grid-cols-2 gap-2 border-b border-gray-200 pb-3 mb-4 text-xs">
+                        <div>
+                            <span class="text-[10px] text-muted font-bold uppercase tracking-wider block">Bill Number</span>
+                            <span class="font-bold text-text text-sm font-mono" id="r-bill-number">---</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-[10px] text-muted font-bold uppercase tracking-wider block">Date & Time</span>
+                            <span class="font-bold text-text" id="r-date">---</span>
+                        </div>
+                        <div class="mt-1">
+                            <span class="text-[10px] text-muted font-bold uppercase tracking-wider block">Service</span>
+                            <span class="font-semibold text-text" id="r-service-info">Table ---</span>
+                        </div>
+                        <div class="text-right mt-1">
+                            <span class="text-[10px] text-muted font-bold uppercase tracking-wider block">Payment Mode</span>
+                            <span class="font-semibold text-primary" id="r-payment-mode">Cash</span>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info Section (If delivery or provided) -->
+                    <div class="mb-4 border-b border-gray-200 pb-3 hidden" id="r-customer-info">
+                        <span class="text-[10px] text-muted font-bold uppercase tracking-wider block mb-0.5">Customer Details</span>
+                        <div class="font-bold text-text text-sm" id="r-customer-name">---</div>
+                        <div class="text-xs text-muted" id="r-customer-phone">---</div>
+                        <div class="text-xs text-muted mt-0.5" id="r-customer-address">---</div>
+                    </div>
+
+                    <!-- Column Header -->
+                    <div class="flex justify-between text-[11px] font-bold text-muted uppercase tracking-wider border-b border-gray-200 pb-1.5 mb-2">
+                        <span class="flex-1">Item Description</span>
+                        <span class="w-12 text-center">Qty</span>
+                        <span class="w-16 text-right">Price</span>
+                        <span class="w-16 text-right">Total</span>
+                    </div>
+
+                    <!-- Items List -->
+                    <div class="space-y-2 mb-4" id="r-items">
+                        <!-- Injected via JS -->
+                    </div>
+
+                    <!-- Totals breakdown -->
+                    <div class="border-t border-dashed border-gray-300 pt-3 space-y-1.5 text-sm">
+                        <div class="flex justify-between text-muted font-medium">
+                            <span>Subtotal</span>
+                            <span class="text-text font-bold">₹<span id="r-subtotal">0.00</span></span>
+                        </div>
+                        <div class="flex justify-between text-muted font-medium">
+                            <span>CGST (2.5%)</span>
+                            <span class="text-text font-bold">₹<span id="r-cgst">0.00</span></span>
+                        </div>
+                        <div class="flex justify-between text-muted font-medium">
+                            <span>SGST (2.5%)</span>
+                            <span class="text-text font-bold">₹<span id="r-sgst">0.00</span></span>
+                        </div>
+                        <div id="r-delivery-row" class="flex justify-between text-muted font-medium hidden">
+                            <span>Delivery Fee</span>
+                            <span class="text-text font-bold">₹<span id="r-delivery">0.00</span></span>
+                        </div>
+                        <div class="flex justify-between pt-3 mt-2 border-t-2 border-gray-200 text-lg font-extrabold text-text bg-gray-50 -mx-6 px-6 py-3">
+                            <span>Total Amount</span>
+                            <span class="text-primary font-mono">₹<span id="r-total">0.00</span></span>
+                        </div>
+                    </div>
+
+                    <!-- UPI QR Code -->
+                    {% if qr_b64 %}
+                    <div class="mt-5 text-center border-t border-gray-200 pt-4">
+                        <p class="text-xs font-bold text-text mb-1 uppercase tracking-wide">Scan & Pay via UPI</p>
+                        <p class="text-[11px] text-muted mb-2">GPay / PhonePe / Paytm / BHIM</p>
+                        <img src="data:image/png;base64,{{ qr_b64 }}" alt="UPI QR" class="w-28 h-28 mx-auto rounded-xl border border-gray-200 p-1 bg-white shadow-sm">
+                    </div>
+                    {% endif %}
+
+                    <!-- Footer message -->
+                    <div class="mt-6 text-center text-xs text-muted border-t border-gray-100 pt-4 space-y-0.5">
+                        <p class="font-bold text-text">Thank you for dining with us!</p>
+                        <p class="italic">Please visit Maharaja's Kitchen again soon.</p>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="receipt-loading" class="py-12 flex flex-col items-center justify-center no-print">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+                    <p class="text-muted text-sm font-medium">Fetching receipt details...</p>
+                </div>
+            </div>
+            
+            <!-- Action Buttons (Print & Download) -->
+            <div class="bg-gray-100 p-4 border-t border-gray-200 flex flex-wrap gap-2 justify-center no-print">
+                <!-- Print Button -->
+                <button onclick="window.print()" class="flex-1 min-w-[120px] bg-primary hover:bg-[#c94d0a] text-white font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 text-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Print Bill
+                </button>
+
+                <!-- Download PDF Button -->
+                <button onclick="downloadPDF()" id="btn-download-pdf" class="flex-1 min-w-[120px] bg-white hover:bg-gray-50 text-text border border-gray-300 font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 text-xs">
+                    <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download PDF
+                </button>
+
+                <!-- Download Text Slip Button -->
+                <a href="/receipt/{{ bill_number }}/download-txt" class="flex-1 min-w-[120px] bg-white hover:bg-gray-50 text-muted hover:text-text border border-gray-300 font-bold py-2.5 px-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 text-xs text-center">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Text Slip
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const billNumber = "{{ bill_number }}";
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        fetch(`/api/orders/${billNumber}`)
+            .then(res => {
+                if(!res.ok) throw new Error('Order not found');
+                return res.json();
+            })
+            .then(order => {
+                document.getElementById('receipt-loading').classList.add('hidden');
+                document.getElementById('receipt-details').classList.remove('hidden');
+                
+                document.getElementById('r-bill-number').innerText = order.bill_number;
+                
+                if (order.order_type === 'Delivery') {
+                    document.getElementById('r-order-badge').innerText = 'Delivery Order';
+                    document.getElementById('r-service-info').innerText = 'Home Delivery';
+                    document.getElementById('r-delivery-row').classList.remove('hidden');
+                    document.getElementById('r-delivery').innerText = (order.delivery_fee || 0).toFixed(2);
+                } else {
+                    document.getElementById('r-order-badge').innerText = 'Dine-In Order';
+                    document.getElementById('r-service-info').innerText = order.table_number ? `Table ${order.table_number}` : 'Dine-In';
+                }
+
+                document.getElementById('r-payment-mode').innerText = order.payment_mode || 'Cash';
+
+                // Format date cleanly
+                try {
+                    let dStr = order.created_at;
+                    if (dStr && !dStr.includes('T')) {
+                        dStr = dStr.replace(' ', 'T') + 'Z';
+                    }
+                    const dateObj = new Date(dStr);
+                    document.getElementById('r-date').innerText = isNaN(dateObj.getTime()) 
+                        ? order.created_at 
+                        : dateObj.toLocaleString('en-IN', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit', hour12: true
+                        });
+                } catch(e) {
+                    document.getElementById('r-date').innerText = order.created_at || 'Today';
+                }
+                
+                // Customer details
+                if (order.customer_name || order.customer_phone || order.customer_address) {
+                    document.getElementById('r-customer-info').classList.remove('hidden');
+                    if (order.customer_name) {
+                        document.getElementById('r-customer-name').innerText = order.customer_name;
+                    }
+                    if (order.customer_phone) {
+                        document.getElementById('r-customer-phone').innerText = 'Phone: ' + order.customer_phone;
+                    }
+                    if (order.customer_address) {
+                        document.getElementById('r-customer-address').innerText = 'Address: ' + order.customer_address;
+                    }
+                }
+                
+                // Render Items
+                const itemsContainer = document.getElementById('r-items');
+                itemsContainer.innerHTML = '';
+                (order.items || []).forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between text-xs items-center py-1 border-b border-gray-100 last:border-0';
+                    div.innerHTML = `
+                        <div class="flex-1 font-semibold text-text pr-2 truncate">${item.name}</div>
+                        <div class="w-12 text-center text-muted font-bold">${item.quantity}x</div>
+                        <div class="w-16 text-right text-muted">₹${item.price.toFixed(2)}</div>
+                        <div class="w-16 text-right font-bold text-text">₹${itemTotal.toFixed(2)}</div>
+                    `;
+                    itemsContainer.appendChild(div);
+                });
+                
+                const tax = order.tax || 0;
+                document.getElementById('r-subtotal').innerText = (order.subtotal || 0).toFixed(2);
+                document.getElementById('r-cgst').innerText = (tax / 2).toFixed(2);
+                document.getElementById('r-sgst').innerText = (tax / 2).toFixed(2);
+                document.getElementById('r-total').innerText = (order.total || 0).toFixed(2);
+            })
+            .catch(err => {
+                document.getElementById('receipt-loading').innerHTML = `
+                    <div class="text-danger text-center py-8">
+                        <svg class="w-12 h-12 mx-auto mb-2 text-danger/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="font-bold text-base text-danger mb-1">Receipt Not Found</p>
+                        <p class="text-xs text-muted mb-4">The order could not be retrieved.</p>
+                        <a href="/" class="text-primary hover:underline font-bold text-sm">Return to Billing</a>
+                    </div>
+                `;
+            });
+    });
+
+    // PDF Download function using local html2pdf
+    function downloadPDF() {
+        const element = document.getElementById('receipt-card');
+        const btn = document.getElementById('btn-download-pdf');
+        
+        if (!element || typeof html2pdf === 'undefined') {
+            // Fallback to print
+            window.print();
+            return;
+        }
+
+        const originalBtnHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-primary border-t-transparent rounded-full"></span> Saving...`;
+        btn.disabled = true;
+
+        const opt = {
+            margin:       [8, 8, 8, 8],
+            filename:     `Maharaja_Kitchen_${billNumber}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, logging: false },
+            jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save()
+            .then(() => {
+                btn.innerHTML = originalBtnHtml;
+                btn.disabled = false;
+                showToast('Receipt PDF downloaded successfully!');
+            })
+            .catch(err => {
+                console.error('PDF generation error:', err);
+                btn.innerHTML = originalBtnHtml;
+                btn.disabled = false;
+                // Fallback to system print if canvas export fails
+                window.print();
+            });
+    }
+</script>
+{% endblock %}

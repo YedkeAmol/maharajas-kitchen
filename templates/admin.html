@@ -1,0 +1,411 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Panel - Food Billing System{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto bg-white p-8 custom-scrollbar relative">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-text tracking-tight flex items-center gap-3">
+                    <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Menu Administration
+                </h1>
+                <p class="text-muted mt-1 ml-11">Manage food items, categories, and pricing.</p>
+            </div>
+            <button onclick="openAddModal()" class="bg-primary hover:bg-[#c94d0a] text-white font-bold py-2.5 px-5 rounded-xl shadow-[0_0_15px_rgba(245,166,35,0.3)] transition-all active:scale-[0.98] flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                New Item
+            </button>
+        </div>
+
+        <div class="bg-gray-50 shadow-2xl rounded-2xl overflow-hidden border border-gray-200">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-surface-700">
+                    <thead class="bg-white">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-muted uppercase tracking-widest">ID</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-muted uppercase tracking-widest">Name</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-muted uppercase tracking-widest">Category</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-extrabold text-muted uppercase tracking-widest">Price</th>
+                            <th scope="col" class="px-6 py-4 text-right text-xs font-extrabold text-muted uppercase tracking-widest">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-items-tbody" class="bg-gray-50 divide-y divide-surface-700">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Loading -->
+            <div id="admin-loading" class="py-16 flex justify-center">
+                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="item-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onclick="closeModal()"></div>
+    <div class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-md mx-4 relative z-10 transform scale-95 opacity-0 transition-all duration-300 border border-gray-200" id="item-modal-content">
+        <div class="p-6 border-b border-gray-200 flex justify-between items-center bg-white rounded-t-2xl">
+            <h3 class="text-xl font-bold text-text flex items-center gap-2" id="modal-title">
+                Add New Item
+            </h3>
+            <button onclick="closeModal()" class="text-muted hover:text-primary transition-colors bg-gray-50 hover:bg-gray-100 rounded-full p-1 border border-gray-200 hover:border-primary">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-5">
+            <input type="hidden" id="item-id">
+            
+            <div>
+                <label class="block text-sm font-bold text-text mb-1.5 ml-1">Name</label>
+                <input type="text" id="item-name" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:bg-gray-50 focus:ring-2 focus:ring-brand-500/50 focus:border-primary outline-none transition-all font-medium text-text placeholder-gray-600" placeholder="e.g. Maharaja Thali">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-text mb-1.5 ml-1">Category</label>
+                    <input type="text" id="item-category" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:bg-gray-50 focus:ring-2 focus:ring-brand-500/50 focus:border-primary outline-none transition-all font-medium text-text placeholder-gray-600" placeholder="e.g. Thalis">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-bold text-text mb-1.5 ml-1">Price (₹)</label>
+                    <input type="number" step="0.01" id="item-price" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:bg-gray-50 focus:ring-2 focus:ring-brand-500/50 focus:border-primary outline-none transition-all font-medium text-text placeholder-gray-600" placeholder="0.00">
+                </div>
+            </div>
+
+            <!-- Dish Image Selection & Live Preview -->
+            <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-bold text-muted uppercase tracking-wider">Dish Photo</label>
+                    <span class="text-[11px] text-muted">Upload file or paste web link</span>
+                </div>
+
+                <div class="flex gap-4 items-center">
+                    <!-- Preview Box -->
+                    <div class="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 bg-white flex flex-col items-center justify-center overflow-hidden shrink-0 relative shadow-inner">
+                        <img id="image-preview" src="" alt="Preview" class="w-full h-full object-cover hidden">
+                        <div id="preview-placeholder" class="text-center p-1">
+                            <span class="text-xl block text-gray-400">📷</span>
+                            <span class="text-[9px] text-gray-400 font-bold block leading-tight mt-0.5">No image</span>
+                        </div>
+                    </div>
+
+                    <!-- Input Controls -->
+                    <div class="flex-1 space-y-2">
+                        <div class="flex items-center gap-2">
+                            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-300 hover:border-primary text-xs font-bold text-text cursor-pointer hover:bg-primary-soft hover:text-primary transition-all shadow-sm">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                <span>Upload Image File</span>
+                                <input type="file" id="item-image-file" accept="image/*" class="sr-only" onchange="handleFileUpload(event)">
+                            </label>
+                            <span id="upload-status" class="text-xs text-muted"></span>
+                        </div>
+
+                        <div>
+                            <div class="relative">
+                                <input type="text" id="item-image-url" class="w-full bg-white border border-gray-300 rounded-xl pl-3 pr-8 py-2 text-xs text-text focus:outline-none focus:border-primary placeholder-gray-400 font-mono transition-colors" placeholder="Or paste image URL (Google links auto-cleaned)...">
+                                <button type="button" onclick="clearImage()" id="clear-img-btn" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 hidden text-xs font-bold" title="Clear image">✕</button>
+                            </div>
+                            <p id="image-status-msg" class="text-[11px] text-muted mt-1 hidden"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Veg / Non-Veg Toggle -->
+            <div class="flex items-center pt-1 pl-1">
+                <label class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="item-is-veg" class="sr-only" checked>
+                        <div class="block bg-white border border-gray-300 w-14 h-8 rounded-full transition-colors toggle-bg"></div>
+                        <div class="dot absolute left-1 top-1 bg-gray-400 w-6 h-6 rounded-full transition-transform"></div>
+                    </div>
+                    <div class="ml-3 text-sm font-bold text-text">Pure Vegetarian (Veg)?</div>
+                </label>
+                <style>
+                    input:checked ~ .toggle-bg { background-color: #16A34A; border-color: #16A34A; }
+                    input:checked ~ .dot { transform: translateX(100%); background-color: white; }
+                </style>
+            </div>
+            
+            <div class="pt-5 mt-2 border-t border-gray-200 flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-5 py-2.5 rounded-xl text-muted font-bold hover:text-gray-200 border border-gray-200 hover:border-surface-600 bg-white transition-colors">Cancel</button>
+                <button onclick="saveItem()" id="save-btn" class="px-6 py-2.5 rounded-xl bg-primary hover:bg-[#c94d0a] text-white font-bold shadow-[0_0_15px_rgba(245,166,35,0.3)] transition-all active:scale-[0.98]">Save Item</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const tbody = document.getElementById('admin-items-tbody');
+    const loading = document.getElementById('admin-loading');
+    const modal = document.getElementById('item-modal');
+    const modalContent = document.getElementById('item-modal-content');
+    const modalTitle = document.getElementById('modal-title');
+    
+    const inputId = document.getElementById('item-id');
+    const inputName = document.getElementById('item-name');
+    const inputCategory = document.getElementById('item-category');
+    const inputPrice = document.getElementById('item-price');
+    const inputImageUrl = document.getElementById('item-image-url');
+    const inputIsVeg = document.getElementById('item-is-veg');
+    const saveBtn = document.getElementById('save-btn');
+
+    const imgPreview = document.getElementById('image-preview');
+    const previewPlaceholder = document.getElementById('preview-placeholder');
+    const imageStatusMsg = document.getElementById('image-status-msg');
+    const clearImgBtn = document.getElementById('clear-img-btn');
+    const uploadStatus = document.getElementById('upload-status');
+    
+    let isEditing = false;
+
+    function updateImagePreview(url) {
+        if (!url || !url.trim()) {
+            imgPreview.src = '';
+            imgPreview.classList.add('hidden');
+            previewPlaceholder.classList.remove('hidden');
+            clearImgBtn.classList.add('hidden');
+            imageStatusMsg.classList.add('hidden');
+            return;
+        }
+
+        let cleanUrl = url.trim();
+        // Extract true image URL if Google Images link was pasted
+        if (cleanUrl.includes('google.') && (cleanUrl.includes('imgres') || cleanUrl.includes('imgurl='))) {
+            try {
+                const u = new URL(cleanUrl);
+                const real = u.searchParams.get('imgurl');
+                if (real) {
+                    cleanUrl = decodeURIComponent(real);
+                    inputImageUrl.value = cleanUrl;
+                }
+            } catch(e) {}
+        }
+
+        clearImgBtn.classList.remove('hidden');
+        imageStatusMsg.innerText = 'Checking image...';
+        imageStatusMsg.className = 'text-[11px] text-muted mt-1';
+        imageStatusMsg.classList.remove('hidden');
+
+        imgPreview.onload = () => {
+            imgPreview.classList.remove('hidden');
+            previewPlaceholder.classList.add('hidden');
+            imageStatusMsg.innerText = '✓ Image loaded successfully';
+            imageStatusMsg.className = 'text-[11px] text-emerald-600 font-bold mt-1';
+        };
+
+        imgPreview.onerror = () => {
+            imgPreview.classList.add('hidden');
+            previewPlaceholder.classList.remove('hidden');
+            imageStatusMsg.innerText = '⚠️ Unable to load image preview (Check URL or use file upload)';
+            imageStatusMsg.className = 'text-[11px] text-amber-600 font-medium mt-1';
+        };
+
+        imgPreview.src = cleanUrl;
+    }
+
+    inputImageUrl.addEventListener('input', (e) => {
+        updateImagePreview(e.target.value);
+    });
+
+    function clearImage() {
+        inputImageUrl.value = '';
+        updateImagePreview('');
+        uploadStatus.innerText = '';
+    }
+
+    function handleFileUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        uploadStatus.innerText = 'Uploading...';
+        uploadStatus.className = 'text-xs text-primary font-medium ml-2';
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('name', inputName.value.trim() || 'dish');
+
+        fetch('/api/upload-item-image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.image_url) {
+                inputImageUrl.value = data.image_url;
+                updateImagePreview(data.image_url);
+                uploadStatus.innerText = '✓ Uploaded';
+                uploadStatus.className = 'text-xs text-emerald-600 font-bold ml-2';
+            } else {
+                uploadStatus.innerText = 'Upload failed';
+                uploadStatus.className = 'text-xs text-red-500 font-medium ml-2';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            uploadStatus.innerText = 'Upload error';
+            uploadStatus.className = 'text-xs text-red-500 font-medium ml-2';
+        });
+    }
+
+    function fetchItems() {
+        loading.classList.remove('hidden');
+        tbody.innerHTML = '';
+        fetch('/api/items')
+            .then(res => res.json())
+            .then(items => {
+                loading.classList.add('hidden');
+                items.forEach((item, index) => {
+                    const vegDot = item.is_veg 
+                        ? `<div class="w-3 h-3 border-2 border-green-600 flex items-center justify-center rounded-sm shrink-0 inline-block mr-1"><div class="w-1.5 h-1.5 bg-green-600 rounded-full"></div></div>`
+                        : `<div class="w-3 h-3 border-2 border-red-600 flex items-center justify-center rounded-sm shrink-0 inline-block mr-1"><div class="w-1.5 h-1.5 bg-red-600 rounded-full"></div></div>`;
+                        
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-100 transition-colors';
+                    tr.style.animation = `popIn 0.3s ease-out ${index * 0.03}s both`;
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">#${item.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-bold text-text flex items-center">${vegDot} ${item.name}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-3 py-1 inline-flex text-xs font-bold rounded-md bg-white text-primary border border-gray-200">
+                                ${item.category}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap font-extrabold text-primary">
+                            ₹${item.price.toFixed(2)}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick='openEditModal(${JSON.stringify(item).replace(/'/g, "\\'")})' class="text-primary hover:text-brand-300 hover:bg-white px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-primary/30 mr-2">Edit</button>
+                            <button onclick="deleteItem(${item.id})" class="text-red-400 hover:text-red-300 hover:bg-white px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-red-500/30">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                showToast('Failed to load items', 'error');
+                loading.classList.add('hidden');
+            });
+    }
+
+    function openAddModal() {
+        isEditing = false;
+        modalTitle.innerText = "Add New Menu Item";
+        inputId.value = '';
+        inputName.value = '';
+        inputCategory.value = '';
+        inputPrice.value = '';
+        inputImageUrl.value = '';
+        inputIsVeg.checked = true;
+        updateImagePreview('');
+        uploadStatus.innerText = '';
+        
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        });
+    }
+
+    function openEditModal(item) {
+        isEditing = true;
+        modalTitle.innerText = "Edit Menu Item";
+        inputId.value = item.id;
+        inputName.value = item.name;
+        inputCategory.value = item.category;
+        inputPrice.value = item.price;
+        inputImageUrl.value = item.image_url || '';
+        inputIsVeg.checked = item.is_veg == 1;
+        
+        let initialImg = item.image_url || '';
+        if (!initialImg) {
+            initialImg = `/static/img/${item.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.jpg`;
+        }
+        updateImagePreview(initialImg);
+        uploadStatus.innerText = '';
+        
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        });
+    }
+
+    function closeModal() {
+        modalContent.classList.remove('scale-100', 'opacity-100');
+        modalContent.classList.add('scale-95', 'opacity-0');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    function saveItem() {
+        const name = inputName.value.trim();
+        const category = inputCategory.value.trim();
+        const price = parseFloat(inputPrice.value);
+        const image_url = inputImageUrl.value.trim();
+        const is_veg = inputIsVeg.checked ? 1 : 0;
+        
+        if(!name || !category || isNaN(price)) {
+            showToast('Please fill all fields correctly', 'error');
+            return;
+        }
+        
+        const payload = { name, category, price, image_url, is_veg };
+        const id = inputId.value;
+        const url = isEditing ? `/api/items/${id}` : '/api/items';
+        const method = isEditing ? 'PUT' : 'POST';
+        
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-surface-900 inline-block mr-2"></div> Saving...';
+        
+        fetch(url, {
+            method,
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        })
+        .then(res => {
+            if(!res.ok) throw new Error('Failed to save');
+            return res.json();
+        })
+        .then(data => {
+            showToast(data.message || 'Item saved successfully');
+            closeModal();
+            fetchItems();
+        })
+        .catch(err => {
+            showToast('Failed to save item', 'error');
+        })
+        .finally(() => {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = 'Save Item';
+        });
+    }
+
+    function deleteItem(id) {
+        if(!confirm('Are you sure you want to delete this item?')) return;
+        
+        fetch(`/api/items/${id}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            showToast('Item deleted successfully');
+            fetchItems();
+        })
+        .catch(err => {
+            showToast('Failed to delete item', 'error');
+        });
+    }
+
+    // Initial load
+    fetchItems();
+</script>
+{% endblock %}

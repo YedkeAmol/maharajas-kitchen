@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Billing History - Maharaja's Kitchen{% endblock %}
+
+{% block content %}
+<div class="p-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-text flex items-center gap-3">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Billing History
+        </h1>
+        <p class="text-muted mt-2">View past transactions, search by bill number, and print receipts.</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Date</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Bill Number</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Type / Details</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Customer</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-muted uppercase tracking-wider">Payment</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-muted uppercase tracking-wider">Total</th>
+                        <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-muted uppercase tracking-wider">Status</th>
+                        <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-muted uppercase tracking-wider">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody" class="bg-white divide-y divide-gray-200">
+                    <!-- Filled by JS -->
+                </tbody>
+            </table>
+        </div>
+        <div id="history-loading" class="py-16 flex justify-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function updateOrderStatus(billNumber, selectEl) {
+        const newStatus = selectEl.value;
+        selectEl.disabled = true;
+        fetch(`/api/orders/${billNumber}/status`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: newStatus})
+        }).then(res => res.json()).then(data => {
+            selectEl.disabled = false;
+            showToast('Order status updated to ' + newStatus);
+        }).catch(err => {
+            selectEl.disabled = false;
+            showToast('Error updating status', 'error');
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const tbody = document.getElementById('history-tbody');
+        const loading = document.getElementById('history-loading');
+        
+        fetch('/api/orders')
+            .then(res => res.json())
+            .then(orders => {
+                loading.classList.add('hidden');
+                
+                if (orders.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-muted">No orders found.</td></tr>`;
+                    return;
+                }
+                
+                orders.forEach(order => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 transition-colors';
+                    
+                    let detailsHtml = '';
+                    if (order.order_type === 'Dine-In') {
+                        detailsHtml = `<span class="px-2 py-1 bg-primary-soft text-primary text-xs font-bold rounded">Dine-In (${order.table_number || 'N/A'})</span>`;
+                    } else {
+                        detailsHtml = `<span class="px-2 py-1 bg-gray-100 text-muted text-xs font-bold rounded">Delivery</span>`;
+                    }
+                    
+                    let customerHtml = order.customer_name ? `<div class="font-semibold text-text">${order.customer_name}</div>` : '-';
+                    if (order.customer_phone) {
+                        customerHtml += `<div class="text-xs text-muted">${order.customer_phone}</div>`;
+                    }
+                    
+                    let statusHtml = '';
+                    if (order.status === 'Void') {
+                        statusHtml = `<span class="text-xs font-bold text-danger">Void</span>`;
+                    } else if (order.order_type === 'Delivery') {
+                        const states = ['Preparing', 'Out for Delivery', 'Delivered'];
+                        let opts = states.map(s => `<option value="${s}" ${order.status === s ? 'selected' : ''}>${s}</option>`).join('');
+                        statusHtml = `<select class="text-xs border border-gray-300 rounded focus:ring-primary focus:border-primary px-2 py-1" onchange="updateOrderStatus('${order.bill_number}', this)">${opts}</select>`;
+                    } else {
+                        statusHtml = `<span class="text-xs font-bold text-success">${order.status}</span>`;
+                    }
+
+                    const dt = new Date(order.created_at);
+                    
+                    let actionHtml = `<div class="flex items-center justify-center gap-1">
+                        <a href="/receipt/${order.bill_number}" target="_blank" class="text-primary hover:text-[#c94d0a] font-bold px-2.5 py-1 rounded-lg hover:bg-primary-soft transition-colors text-xs" title="View & Print Bill">Print / PDF</a>
+                        <a href="/receipt/${order.bill_number}/download-txt" class="text-muted hover:text-text font-bold px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-xs" title="Download Text Slip">Slip</a>`;
+                    
+                    if (order.status !== 'Void') {
+                        actionHtml += `<button onclick="if(confirm('Are you sure you want to void this bill?')) updateOrderStatus('${order.bill_number}', {value: 'Void'})" class="text-danger hover:text-red-700 font-bold px-2 py-1 rounded-lg hover:bg-red-50 transition-colors text-xs">Void</button>`;
+                    }
+                    actionHtml += `</div>`;
+
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-text">
+                            ${dt.toLocaleDateString()}<br><span class="text-xs text-muted">${dt.toLocaleTimeString()}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-text">${order.bill_number}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${detailsHtml}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${customerHtml}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-text">${order.payment_mode || 'Cash'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right font-extrabold text-primary">₹${order.total.toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">${statusHtml}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm">
+                            ${actionHtml}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                loading.classList.add('hidden');
+                console.error(err);
+            });
+    });
+</script>
+{% endblock %}

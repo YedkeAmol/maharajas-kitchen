@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Maharaja's Kitchen</title>
+    <link rel="icon" type="image/jpeg" href="/static/img/logo.jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E8590C;
+            --primary-soft: #FFF1E6;
+            --text: #1F2937;
+            --muted: #6B7280;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'var(--primary)',
+                        'primary-soft': 'var(--primary-soft)',
+                        text: 'var(--text)',
+                        muted: 'var(--muted)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-text font-sans antialiased h-screen flex items-center justify-center">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 border border-gray-200">
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 bg-primary-soft rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+                <img src="/static/img/logo.jpg" alt="Logo" class="w-16 h-16 rounded-full object-cover">
+            </div>
+            <h1 class="text-2xl font-bold text-text mb-1">Welcome Back</h1>
+            <p class="text-muted text-sm">Sign in to your Maharaja's Kitchen account</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6 font-medium text-center border border-red-200">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST" class="space-y-5">
+            <div>
+                <label class="block text-sm font-bold text-text mb-2">Username</label>
+                <div class="relative">
+                    <input type="text" name="username" required class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-text focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="Enter your username">
+                    <svg class="w-5 h-5 text-muted absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-text mb-2">Password</label>
+                <div class="relative">
+                    <input type="password" name="password" required class="w-full bg-gray-50 border border-gray-300 rounded-xl pl-10 pr-4 py-3 text-text focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="••••••••">
+                    <svg class="w-5 h-5 text-muted absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:bg-[#c94d0a] transition-colors focus:ring-4 focus:ring-primary/30 mt-2">
+                Sign In
+            </button>
+        </form>
+    </div>
+
+</body>
+</html>
